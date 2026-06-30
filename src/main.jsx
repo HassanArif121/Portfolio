@@ -127,8 +127,12 @@ function Hero() {
         <p className="eyebrow">
           <Sparkles size={18} /> Available for full-stack and AI projects
         </p>
-        <h1>
-          AI/ML + full stack developer building sharp web products with intelligent systems.
+        <h1 className="hero-title">
+          <span className="hero-title__focus">AI/ML + Full Stack</span>
+          <span className="hero-title__role">Developer</span>
+          <span className="hero-title__support">
+            building sharp web products with intelligent systems.
+          </span>
         </h1>
         <p className="hero__summary">{portfolio.summary}</p>
         <div className="hero__actions">
@@ -331,14 +335,19 @@ function Contact() {
       }
 
       setForm({ name: "", email: "", subject: "", message: "" });
-      setStatus({ state: "success", message: "Message saved. I will reply from email soon." });
+      setStatus({ state: "success", message: "Message saved successfully. I will review it and reply by email." });
     } catch (error) {
       setStatus({ state: "error", message: error.message });
     }
   }
 
   return (
-    <Section id="contact" eyebrow="Contact" title="Have a project, role, or idea? Let us talk.">
+    <Section
+      id="contact"
+      eyebrow="Contact"
+      title="Start a conversation about your next product or AI idea."
+      className="contact-section"
+    >
       <div className="contact-layout">
         <motion.div
           className="contact-panel"
@@ -347,22 +356,43 @@ function Contact() {
           whileInView="visible"
           viewport={{ once: true, margin: "-120px" }}
         >
-          <a href={`mailto:${portfolio.contact.email}`}>
-            <Mail size={20} />
-            {portfolio.contact.email}
-          </a>
-          <a href={`tel:${portfolio.contact.phone.replaceAll("-", "").replace("+", "00")}`}>
-            <Phone size={20} />
-            {portfolio.contact.phone}
-          </a>
-          <a href={portfolio.contact.linkedin} target="_blank" rel="noreferrer">
-            <FaLinkedinIn />
-            LinkedIn
-          </a>
-          <a href={portfolio.contact.github} target="_blank" rel="noreferrer">
-            <FaGithub />
-            GitHub
-          </a>
+          <div className="contact-panel__intro">
+            <span>Open to</span>
+            <h3>Internships, freelance builds, AI dashboards, and full-stack product work.</h3>
+            <p>
+              Send a short note with the role, project scope, or collaboration idea. I usually respond through email.
+            </p>
+          </div>
+          <div className="contact-methods">
+            <a href={`mailto:${portfolio.contact.email}`}>
+              <span className="contact-methods__icon"><Mail size={20} /></span>
+              <span>
+                <small>Email</small>
+                {portfolio.contact.email}
+              </span>
+            </a>
+            <a href={`tel:${portfolio.contact.phone.replaceAll("-", "").replace("+", "00")}`}>
+              <span className="contact-methods__icon"><Phone size={20} /></span>
+              <span>
+                <small>Phone</small>
+                {portfolio.contact.phone}
+              </span>
+            </a>
+            <a href={portfolio.contact.linkedin} target="_blank" rel="noreferrer">
+              <span className="contact-methods__icon"><FaLinkedinIn /></span>
+              <span>
+                <small>Network</small>
+                LinkedIn
+              </span>
+            </a>
+            <a href={portfolio.contact.github} target="_blank" rel="noreferrer">
+              <span className="contact-methods__icon"><FaGithub /></span>
+              <span>
+                <small>Code</small>
+                GitHub
+              </span>
+            </a>
+          </div>
         </motion.div>
 
         <motion.form
@@ -373,6 +403,10 @@ function Contact() {
           whileInView="visible"
           viewport={{ once: true, margin: "-120px" }}
         >
+          <div className="contact-form__header">
+            <span>Direct message</span>
+            <h3>Tell me what you want to build.</h3>
+          </div>
           <label>
             Name
             <input
