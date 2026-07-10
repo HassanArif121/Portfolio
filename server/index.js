@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import morgan from "morgan";
+import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +14,9 @@ const rootDir = path.resolve(__dirname, "..");
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const memoryMessages = [];
+const inboxEmail = process.env.CONTACT_TO_EMAIL || "hassan7663arif@gmail.com";
+const emailUser = process.env.EMAIL_USER;
+const emailPassword = process.env.EMAIL_APP_PASSWORD;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -33,6 +37,67 @@ const contactSchema = new mongoose.Schema(
 const ContactMessage =
   mongoose.models.ContactMessage ||
   mongoose.model("ContactMessage", contactSchema);
+
+function createMailTransport() {
+  if (!emailUser || !emailPassword) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailUser,
+      pass: emailPassword
+    }
+  });
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function sendContactEmail(payload) {
+  const transporter = createMailTransport();
+
+  if (!transporter) {
+    throw new Error("Email service is not configured.");
+  }
+
+  const subject = `Portfolio contact: ${payload.subject}`;
+  const text = [
+    "New portfolio contact message",
+    "",
+    `Name: ${payload.name}`,
+    `Email: ${payload.email}`,
+    `Subject: ${payload.subject}`,
+    "",
+    payload.message
+  ].join("\n");
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111">
+      <h2>New portfolio contact message</h2>
+      <p><strong>Name:</strong> ${escapeHtml(payload.name)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(payload.email)}</p>
+      <p><strong>Subject:</strong> ${escapeHtml(payload.subject)}</p>
+      <p><strong>Message:</strong></p>
+      <div style="white-space:pre-wrap;padding:14px;border:1px solid #ddd;border-radius:8px;background:#f7f7f7">${escapeHtml(payload.message)}</div>
+    </div>
+  `;
+
+  return transporter.sendMail({
+    from: `"Muhammad Hassan Portfolio" <${emailUser}>`,
+    to: inboxEmail,
+    replyTo: payload.email,
+    subject,
+    text,
+    html
+  });
+}
 
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
@@ -56,7 +121,8 @@ let mongoReady = false;
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
-    mongo: mongoReady && mongoose.connection.readyState === 1 ? "connected" : "memory"
+    mongo: mongoReady && mongoose.connection.readyState === 1 ? "connected" : "memory",
+    email: emailUser && emailPassword ? "configured" : "missing"
   });
 });
 
@@ -89,17 +155,22 @@ app.post("/api/contact", async (req, res) => {
   };
 
   try {
+    let id;
+
     if (mongoReady && mongoose.connection.readyState === 1) {
       const saved = await ContactMessage.create(payload);
-      return res.status(201).json({ ok: true, id: saved._id });
+      id = saved._id;
+    } else {
+      const localId = `local-${Date.now()}`;
+      memoryMessages.push({ id: localId, ...payload, createdAt: new Date().toISOString() });
+      id = localId;
     }
 
-    const localId = `local-${Date.now()}`;
-    memoryMessages.push({ id: localId, ...payload, createdAt: new Date().toISOString() });
-    return res.status(201).json({ ok: true, id: localId, storage: "memory" });
+    await sendContactEmail(payload);
+    return res.status(201).json({ ok: true, id, email: "sent" });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ ok: false, error: "Could not save the message." });
+    return res.status(500).json({ ok: false, error: "Could not send the message. Please email me directly." });
   }
 });
 

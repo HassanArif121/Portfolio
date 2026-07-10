@@ -339,7 +339,7 @@ function Contact() {
       }
 
       setForm({ name: "", email: "", subject: "", message: "" });
-      setStatus({ state: "success", message: "Message saved successfully. I will review it and reply by email." });
+      setStatus({ state: "success", message: "Message sent successfully. I will reply by email." });
     } catch (error) {
       setStatus({ state: "error", message: error.message });
     }
