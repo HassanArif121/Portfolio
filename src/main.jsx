@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import {
@@ -18,13 +18,72 @@ import { portfolio } from "./portfolio-data";
 import "./styles.css";
 
 const reveal = {
-  hidden: { opacity: 0, y: 34 },
+  hidden: { opacity: 0, y: 28, scale: 0.985 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.72, ease: [0.22, 1, 0.36, 1] }
+    scale: 1,
+    transition: { duration: 0.76, ease: [0.22, 1, 0.36, 1] }
   }
 };
+
+const bootLines = [
+  "03:47:52 INCOMING HTTP REQUEST DETECTED ...",
+  "03:47:55 SERVICE WAKING UP ...",
+  "03:47:59 ALLOCATING COMPUTE RESOURCES ...",
+  "03:48:02 PREPARING INSTANCE FOR INITIALIZATION ...",
+  "03:48:06 STARTING THE INSTANCE ..."
+];
+
+const bootArt = String.raw`
+ __        __   _                            _
+ \ \      / /__| | ___ ___  _ __ ___   ___  | |_ ___
+  \ \ /\ / / _ \ |/ __/ _ \| '_ ' _ \ / _ \ | __/ _ \
+   \ V  V /  __/ | (_| (_) | | | | | |  __/ | || (_) |
+    \_/\_/ \___|_|\___\___/|_| |_| |_|\___|  \__\___/
+
+  ____                _           
+ |  _ \ ___ _ __   __| | ___ _ __ 
+ | |_) / _ \ '_ \ / _' |/ _ \ '__|
+ |  _ <  __/ | | | (_| |  __/ |   
+ |_| \_\___|_| |_|\__,_|\___|_|   
+`;
+
+function RenderLoader() {
+  return (
+    <motion.div
+      className="render-loader"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      role="status"
+      aria-label="Application loading"
+    >
+      <div className="render-loader__top">
+        <strong>Render</strong>
+        <span aria-hidden="true" />
+        <p>Application loading</p>
+      </div>
+
+      <div className="render-loader__console">
+        {bootLines.slice(0, 2).map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+        <pre className="render-loader__art" aria-hidden="true">
+          {bootArt}
+        </pre>
+        <div className="render-loader__bar" aria-hidden="true">
+          <span />
+        </div>
+        {bootLines.slice(2).map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </div>
+
+      <div className="render-loader__footer">Opening Muhammad Hassan portfolio {"->"}</div>
+    </motion.div>
+  );
+}
 
 function Section({ id, eyebrow, title, children, className = "" }) {
   return (
@@ -234,7 +293,10 @@ function Projects() {
               whileHover={{ y: -8 }}
             >
               <a href={project.href || "#contact"} target={project.href ? "_blank" : undefined} rel="noreferrer">
-                <img src={project.image} alt="" />
+                <div className="project-card__media">
+                  <img src={project.image} alt="" />
+                  <span>{project.href ? "Open project" : "Ask for details"}</span>
+                </div>
                 <div className="project-card__body">
                   <div className="project-card__meta">
                     <span>{project.category}</span>
@@ -461,18 +523,43 @@ function Footer() {
 }
 
 function App() {
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    document.body.classList.add("is-booting");
+    const timer = window.setTimeout(() => {
+      setBooting(false);
+      document.body.classList.remove("is-booting");
+    }, 2850);
+    return () => {
+      window.clearTimeout(timer);
+      document.body.classList.remove("is-booting");
+    };
+  }, []);
+
   return (
     <>
-      <Header />
-      <Hero />
-      <AboutStrip />
-      <Projects />
-      <Skills />
-      <Experience />
-      <Contact />
-      <Footer />
+      <AnimatePresence>{booting && <RenderLoader />}</AnimatePresence>
+      <motion.div
+        className="site-shell"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: booting ? 0 : 1, y: booting ? 12 : 0 }}
+        transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <Header />
+        <Hero />
+        <AboutStrip />
+        <Projects />
+        <Skills />
+        <Experience />
+        <Contact />
+        <Footer />
+      </motion.div>
     </>
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const rootElement = document.getElementById("root");
+const root = globalThis.__portfolioRoot || createRoot(rootElement);
+globalThis.__portfolioRoot = root;
+root.render(<App />);

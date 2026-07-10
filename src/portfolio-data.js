@@ -19,7 +19,7 @@ export const portfolio = {
       category: "Web",
       year: "Final Year Project",
       image: "/assets/project-attendance.png",
-      href: "",
+      href: "https://github.com/saadee1605/finalyearproject",
       description:
         "React dashboard experience aligned with a 9-stage computer vision pipeline for attendance capture, validation, logging, and monitoring.",
       stack: ["React", "JavaScript", "Computer Vision", "OpenCV"]
@@ -39,7 +39,7 @@ export const portfolio = {
       category: "Web",
       year: "React Project",
       image: "/assets/project-rehab.png",
-      href: "",
+      href: "https://github.com/HassanArif121/Rehabilitation-Center",
       description:
         "Structured React website with reusable sections for services, calls to action, and readable navigation across screen sizes.",
       stack: ["React", "Responsive UI", "Components"]
