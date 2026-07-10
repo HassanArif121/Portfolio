@@ -326,11 +326,15 @@ function Contact() {
     event.preventDefault();
     setStatus({ state: "loading", message: "Sending..." });
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 18000);
+
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
+        signal: controller.signal
       });
       const data = await response.json();
 
@@ -341,7 +345,13 @@ function Contact() {
       setForm({ name: "", email: "", subject: "", message: "" });
       setStatus({ state: "success", message: "Message sent successfully. I will reply by email." });
     } catch (error) {
-      setStatus({ state: "error", message: error.message });
+      const message =
+        error.name === "AbortError"
+          ? "Email service took too long. Please email me directly at hassan7663arif@gmail.com."
+          : error.message;
+      setStatus({ state: "error", message });
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 

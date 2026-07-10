@@ -17,6 +17,10 @@ const memoryMessages = [];
 const inboxEmail = process.env.CONTACT_TO_EMAIL || "hassan7663arif@gmail.com";
 const emailUser = process.env.EMAIL_USER;
 const emailPassword = process.env.EMAIL_APP_PASSWORD;
+const parsedEmailTimeoutMs = Number.parseInt(process.env.EMAIL_TIMEOUT_MS || "15000", 10);
+const emailTimeoutMs = Number.isFinite(parsedEmailTimeoutMs) && parsedEmailTimeoutMs > 0
+  ? parsedEmailTimeoutMs
+  : 15000;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -45,6 +49,9 @@ function createMailTransport() {
 
   return nodemailer.createTransport({
     service: "gmail",
+    connectionTimeout: emailTimeoutMs,
+    greetingTimeout: emailTimeoutMs,
+    socketTimeout: emailTimeoutMs,
     auth: {
       user: emailUser,
       pass: emailPassword
@@ -89,14 +96,29 @@ async function sendContactEmail(payload) {
     </div>
   `;
 
-  return transporter.sendMail({
-    from: `"Muhammad Hassan Portfolio" <${emailUser}>`,
-    to: inboxEmail,
-    replyTo: payload.email,
-    subject,
-    text,
-    html
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error("Email service timed out."));
+    }, emailTimeoutMs);
   });
+
+  try {
+    return await Promise.race([
+      transporter.sendMail({
+        from: `"Muhammad Hassan Portfolio" <${emailUser}>`,
+        to: inboxEmail,
+        replyTo: payload.email,
+        subject,
+        text,
+        html
+      }),
+      timeout
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+    transporter.close();
+  }
 }
 
 async function connectMongo() {
