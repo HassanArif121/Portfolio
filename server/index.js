@@ -17,6 +17,14 @@ const memoryMessages = [];
 const inboxEmail = process.env.CONTACT_TO_EMAIL || "hassan7663arif@gmail.com";
 const emailUser = process.env.EMAIL_USER;
 const emailPassword = process.env.EMAIL_APP_PASSWORD;
+// Resend (HTTPS email API) — works on hosts that block outbound SMTP (e.g. Render free tier).
+const resendApiKey = process.env.RESEND_API_KEY;
+const emailFrom = process.env.EMAIL_FROM || "Portfolio Contact <onboarding@resend.dev>";
+const emailProvider = resendApiKey
+  ? "resend"
+  : emailUser && emailPassword
+    ? "smtp"
+    : "none";
 const parsedEmailTimeoutMs = Number.parseInt(process.env.EMAIL_TIMEOUT_MS || "15000", 10);
 const emailTimeoutMs = Number.isFinite(parsedEmailTimeoutMs) && parsedEmailTimeoutMs > 0
   ? parsedEmailTimeoutMs
@@ -81,13 +89,7 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#039;");
 }
 
-async function sendContactEmail(payload) {
-  const transporter = createMailTransport();
-
-  if (!transporter) {
-    throw new Error("Email service is not configured.");
-  }
-
+function buildEmailContent(payload) {
   const subject = `Portfolio contact: ${payload.subject}`;
   const text = [
     "New portfolio contact message",
@@ -108,6 +110,52 @@ async function sendContactEmail(payload) {
       <div style="white-space:pre-wrap;padding:14px;border:1px solid #ddd;border-radius:8px;background:#f7f7f7">${escapeHtml(payload.message)}</div>
     </div>
   `;
+  return { subject, text, html };
+}
+
+// HTTPS email via Resend — not affected by SMTP port blocking on the host.
+async function sendViaResend(payload) {
+  const { subject, text, html } = buildEmailContent(payload);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), emailTimeoutMs);
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: emailFrom,
+        to: [inboxEmail],
+        reply_to: payload.email,
+        subject,
+        text,
+        html
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Resend API error ${response.status}: ${detail}`);
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// SMTP via nodemailer — for local dev or hosts that allow outbound SMTP.
+async function sendViaSmtp(payload) {
+  const transporter = createMailTransport();
+  if (!transporter) {
+    throw new Error("Email service is not configured.");
+  }
+
+  const { subject, text, html } = buildEmailContent(payload);
 
   let timeoutId;
   const timeout = new Promise((_, reject) => {
@@ -134,6 +182,16 @@ async function sendContactEmail(payload) {
   }
 }
 
+async function sendContactEmail(payload) {
+  if (emailProvider === "resend") {
+    return sendViaResend(payload);
+  }
+  if (emailProvider === "smtp") {
+    return sendViaSmtp(payload);
+  }
+  throw new Error("Email service is not configured.");
+}
+
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
     console.warn("MONGODB_URI is not set. Contact messages will be kept in memory for this run.");
@@ -152,17 +210,23 @@ async function connectMongo() {
 }
 
 let mongoReady = false;
-let smtpStatus = emailUser && emailPassword ? "unverified" : "missing";
+let smtpStatus = emailProvider === "none" ? "missing" : "unverified";
 
-// Confirm the Gmail credentials actually authenticate, and log the real reason
-// if they don't. This runs once at startup so /api/health can report it.
-async function verifySmtp() {
-  const transporter = createMailTransport();
-  if (!transporter) {
-    smtpStatus = "missing";
-    console.warn("Email is NOT configured: set EMAIL_USER and EMAIL_APP_PASSWORD.");
+// Confirm the email provider is usable at startup and log the real reason if not,
+// so /api/health can report it. Resend uses HTTPS (works where SMTP is blocked);
+// SMTP is verified via a live connection.
+async function verifyEmail() {
+  if (emailProvider === "resend") {
+    smtpStatus = "resend: ready";
+    console.log(`Email provider: Resend (HTTPS). Contact emails will be sent to ${inboxEmail}.`);
     return;
   }
+  if (emailProvider === "none") {
+    smtpStatus = "missing";
+    console.warn("Email is NOT configured: set RESEND_API_KEY (recommended) or EMAIL_USER + EMAIL_APP_PASSWORD.");
+    return;
+  }
+  const transporter = createMailTransport();
   try {
     await transporter.verify();
     smtpStatus = "ok";
@@ -172,7 +236,7 @@ async function verifySmtp() {
     console.error("SMTP verification FAILED. The contact form cannot send email.");
     console.error("Reason:", error.message);
     console.error(
-      "Most common fix: use a Gmail *App Password* (16 chars, 2-Step Verification must be ON), not your normal password."
+      "If this is a 'Connection timeout' on a host that blocks SMTP (e.g. Render free tier), switch to Resend by setting RESEND_API_KEY."
     );
   } finally {
     transporter.close();
@@ -183,7 +247,8 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     mongo: mongoReady && mongoose.connection.readyState === 1 ? "connected" : "memory",
-    email: emailUser && emailPassword ? "configured" : "missing",
+    email: emailProvider === "none" ? "missing" : "configured",
+    provider: emailProvider,
     smtp: smtpStatus,
     inbox: inboxEmail,
     allowedOrigins: allowedOrigins.length ? allowedOrigins : "all"
@@ -259,7 +324,7 @@ app.use((_req, res) => {
 });
 
 mongoReady = await connectMongo();
-await verifySmtp();
+await verifyEmail();
 
 app.listen(port, () => {
   console.log(`Portfolio API running on http://127.0.0.1:${port}`);
