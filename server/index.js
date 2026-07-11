@@ -152,12 +152,41 @@ async function connectMongo() {
 }
 
 let mongoReady = false;
+let smtpStatus = emailUser && emailPassword ? "unverified" : "missing";
+
+// Confirm the Gmail credentials actually authenticate, and log the real reason
+// if they don't. This runs once at startup so /api/health can report it.
+async function verifySmtp() {
+  const transporter = createMailTransport();
+  if (!transporter) {
+    smtpStatus = "missing";
+    console.warn("Email is NOT configured: set EMAIL_USER and EMAIL_APP_PASSWORD.");
+    return;
+  }
+  try {
+    await transporter.verify();
+    smtpStatus = "ok";
+    console.log(`SMTP verified. Contact emails will be sent to ${inboxEmail}.`);
+  } catch (error) {
+    smtpStatus = `error: ${error.message}`;
+    console.error("SMTP verification FAILED. The contact form cannot send email.");
+    console.error("Reason:", error.message);
+    console.error(
+      "Most common fix: use a Gmail *App Password* (16 chars, 2-Step Verification must be ON), not your normal password."
+    );
+  } finally {
+    transporter.close();
+  }
+}
 
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     mongo: mongoReady && mongoose.connection.readyState === 1 ? "connected" : "memory",
-    email: emailUser && emailPassword ? "configured" : "missing"
+    email: emailUser && emailPassword ? "configured" : "missing",
+    smtp: smtpStatus,
+    inbox: inboxEmail,
+    allowedOrigins: allowedOrigins.length ? allowedOrigins : "all"
   });
 });
 
@@ -204,8 +233,18 @@ app.post("/api/contact", async (req, res) => {
     await sendContactEmail(payload);
     return res.status(201).json({ ok: true, id, email: "sent" });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ ok: false, error: "Could not send the message. Please email me directly." });
+    console.error("Contact submission failed.");
+    console.error("Message:", error.message);
+    if (error.code) console.error("Code:", error.code);
+    if (error.response) console.error("SMTP response:", error.response);
+
+    const notConfigured = /not configured/i.test(error.message);
+    return res.status(notConfigured ? 503 : 500).json({
+      ok: false,
+      error: notConfigured
+        ? "Email is not set up yet. Please email me directly at " + inboxEmail + "."
+        : "Could not send the message right now. Please email me directly at " + inboxEmail + "."
+    });
   }
 });
 
@@ -220,6 +259,7 @@ app.use((_req, res) => {
 });
 
 mongoReady = await connectMongo();
+await verifySmtp();
 
 app.listen(port, () => {
   console.log(`Portfolio API running on http://127.0.0.1:${port}`);
