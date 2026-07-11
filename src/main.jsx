@@ -17,6 +17,10 @@ import { FaGithub, FaLinkedinIn } from "react-icons/fa";
 import { portfolio } from "./portfolio-data";
 import "./styles.css";
 
+// Base URL for the backend API. Empty in local dev (Vite proxy handles /api),
+// set to the backend web-service URL in production via VITE_API_BASE_URL.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
 const reveal = {
   hidden: { opacity: 0, y: 28, scale: 0.985 },
   visible: {
@@ -330,7 +334,7 @@ function Contact() {
     const timeoutId = window.setTimeout(() => controller.abort(), 18000);
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

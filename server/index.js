@@ -22,7 +22,20 @@ const emailTimeoutMs = Number.isFinite(parsedEmailTimeoutMs) && parsedEmailTimeo
   ? parsedEmailTimeoutMs
   : 15000;
 
-app.use(cors());
+// Restrict the API to your static-site origin(s) when ALLOWED_ORIGINS is set
+// (comma-separated). Left unset, it allows all origins.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors(
+    allowedOrigins.length
+      ? { origin: allowedOrigins }
+      : undefined
+  )
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 app.use("/assets", express.static(path.join(rootDir, "public", "assets")));
