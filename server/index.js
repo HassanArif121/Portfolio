@@ -199,7 +199,12 @@ async function connectMongo() {
   }
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    // Fail fast rather than hanging: a slow Atlas handshake must never hold up
+    // a contact submission, since the email is what actually matters.
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000
+    });
     console.log("MongoDB connected.");
     return true;
   } catch (error) {
@@ -283,20 +288,22 @@ app.post("/api/contact", async (req, res) => {
     source: "muhammad-hassan-portfolio"
   };
 
+  const localId = `local-${Date.now()}`;
+  memoryMessages.push({ id: localId, ...payload, createdAt: new Date().toISOString() });
+
+  // The archive copy runs alongside the email instead of in front of it — a slow
+  // or unreachable database should never cost the sender their message.
+  const archived =
+    mongoReady && mongoose.connection.readyState === 1
+      ? ContactMessage.create(payload).catch((error) => {
+          console.warn("Could not archive the message to MongoDB:", error.message);
+          return null;
+        })
+      : Promise.resolve(null);
+
   try {
-    let id;
-
-    if (mongoReady && mongoose.connection.readyState === 1) {
-      const saved = await ContactMessage.create(payload);
-      id = saved._id;
-    } else {
-      const localId = `local-${Date.now()}`;
-      memoryMessages.push({ id: localId, ...payload, createdAt: new Date().toISOString() });
-      id = localId;
-    }
-
-    await sendContactEmail(payload);
-    return res.status(201).json({ ok: true, id, email: "sent" });
+    const [saved] = await Promise.all([archived, sendContactEmail(payload)]);
+    return res.status(201).json({ ok: true, id: saved?._id || localId, email: "sent" });
   } catch (error) {
     console.error("Contact submission failed.");
     console.error("Message:", error.message);
@@ -323,9 +330,15 @@ app.use((_req, res) => {
   });
 });
 
-mongoReady = await connectMongo();
-await verifyEmail();
-
+// Start listening immediately. On a host that spins down when idle (Render free
+// tier and friends), waiting on the Mongo and SMTP handshakes before binding the
+// port adds those seconds to every cold start, which is long enough for the
+// browser to give up on the first contact submission.
 app.listen(port, () => {
   console.log(`Portfolio API running on http://127.0.0.1:${port}`);
 });
+
+connectMongo().then((ready) => {
+  mongoReady = ready;
+});
+verifyEmail();

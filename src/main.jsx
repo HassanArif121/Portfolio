@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   AnimatePresence,
@@ -528,11 +528,56 @@ function Journey() {
 
 const EMPTY_FORM = { name: "", email: "", subject: "", message: "" };
 
-function Field({ id, label, value, onChange, type = "text", required = false, rows }) {
+// The API is hosted on a plan that spins the container down when idle, so the
+// first request after a quiet period pays a ~30s cold start. These numbers are
+// sized for that: wait long enough to outlast a boot, and warn the sender once
+// it is clearly a wake-up rather than a hang.
+const SEND_TIMEOUT_MS = 45000;
+const SLOW_NOTICE_MS = 7000;
+
+class TransportError extends Error {}
+
+async function postContact(body) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/api/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (error) {
+    // Timed out or never reached the server — worth another attempt.
+    throw new TransportError(error.name === "AbortError" ? "timeout" : "network");
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  const data = await response.json().catch(() => null);
+
+  // A failure with no API payload came from a gateway or proxy in front of a
+  // still-booting service (Render answers 502/503 while a container wakes), not
+  // from the app itself — that is worth another attempt.
+  if (!response.ok && typeof data?.error !== "string") {
+    throw new TransportError(`http-${response.status}`);
+  }
+
+  // The API answered for real, so retrying would just repeat the same rejection.
+  if (!response.ok || !data.ok) {
+    throw new Error(data?.error || "Message could not be sent.");
+  }
+  return data;
+}
+
+function Field({ id, label, value, onChange, onFocus, type = "text", required = false, rows }) {
   const shared = {
     id,
     value,
     required,
+    onFocus,
     placeholder: " ",
     onChange: (event) => onChange(event.target.value)
   };
@@ -547,38 +592,71 @@ function Field({ id, label, value, onChange, type = "text", required = false, ro
 function Contact() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [status, setStatus] = useState({ state: "idle", message: "" });
+  const sectionRef = useRef(null);
   const set = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  // Wake the API as soon as someone reaches the contact section, so it is warm
+  // by the time they finish typing. Fire-and-forget: failure here is harmless.
+  const warmed = useRef(false);
+  const warmUp = useCallback(() => {
+    if (warmed.current) return;
+    warmed.current = true;
+    fetch(`${API_BASE}/api/health`, { cache: "no-store" }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) warmUp();
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [warmUp]);
 
   async function submit(event) {
     event.preventDefault();
     setStatus({ state: "loading", message: "Sending your message…" });
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 18000);
+    const slowNotice = window.setTimeout(() => {
+      setStatus((prev) =>
+        prev.state === "loading"
+          ? { state: "loading", message: "Waking the mail server — this can take up to a minute." }
+          : prev
+      );
+    }, SLOW_NOTICE_MS);
 
     try {
-      const response = await fetch(`${API_BASE}/api/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-        signal: controller.signal
-      });
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Message failed.");
+      let data;
+      try {
+        data = await postContact(form);
+      } catch (error) {
+        // A cold start eats the first request; the retry lands on a warm server.
+        if (!(error instanceof TransportError)) throw error;
+        setStatus({ state: "loading", message: "Server was asleep — retrying…" });
+        data = await postContact(form);
       }
 
       setForm(EMPTY_FORM);
-      setStatus({ state: "success", message: "Message sent. I'll reply by email shortly." });
+      setStatus({
+        state: "success",
+        message: data.email === "sent"
+          ? "Message sent. I'll reply by email shortly."
+          : "Message received. I'll reply by email shortly."
+      });
     } catch (error) {
-      const message =
-        error.name === "AbortError"
-          ? `The email service took too long. Please write to me directly at ${portfolio.contact.email}.`
-          : error.message;
-      setStatus({ state: "error", message });
+      setStatus({
+        state: "error",
+        message:
+          error instanceof TransportError
+            ? `Couldn't reach the server. Please email me directly at ${portfolio.contact.email}.`
+            : error.message
+      });
     } finally {
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(slowNotice);
     }
   }
 
@@ -595,7 +673,7 @@ function Contact() {
   ];
 
   return (
-    <section className="section section--alt" id="contact">
+    <section className="section section--alt" id="contact" ref={sectionRef}>
       <div className="shell">
         <SectionHead
           index="04"
@@ -630,22 +708,37 @@ function Contact() {
 
           <Reveal className="form" as="form" delay={1} onSubmit={submit}>
             <div className="form__row">
-              <Field id="name" label="Your name" value={form.name} onChange={set("name")} required />
+              <Field
+                id="name"
+                label="Your name"
+                value={form.name}
+                onChange={set("name")}
+                onFocus={warmUp}
+                required
+              />
               <Field
                 id="email"
                 type="email"
                 label="Email address"
                 value={form.email}
                 onChange={set("email")}
+                onFocus={warmUp}
                 required
               />
             </div>
-            <Field id="subject" label="Subject" value={form.subject} onChange={set("subject")} />
+            <Field
+              id="subject"
+              label="Subject"
+              value={form.subject}
+              onChange={set("subject")}
+              onFocus={warmUp}
+            />
             <Field
               id="message"
               label="What are you working on?"
               value={form.message}
               onChange={set("message")}
+              onFocus={warmUp}
               rows={5}
               required
             />
