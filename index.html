@@ -1,20 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Muhammad Hassan - AI/ML and full-stack developer portfolio."
+      content="Muhammad Hassan — AI/ML and full-stack developer. Computer Engineering graduate from ITU Lahore building React front-ends, Node APIs and computer vision systems."
     />
-    <meta name="theme-color" content="#14152b" />
-    <title>Muhammad Hassan | AI/ML + Full Stack Developer</title>
+    <meta name="theme-color" content="#f6f4f1" />
+    <meta name="author" content="Muhammad Hassan" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Muhammad Hassan — AI/ML + Full Stack Developer" />
+    <meta
+      property="og:description"
+      content="Selected work in React, Node and applied computer vision."
+    />
+    <meta property="og:image" content="/assets/muhammad-hassan-profile.png" />
+
+    <title>Muhammad Hassan — AI/ML + Full Stack Developer</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Resolve the theme before first paint so there is no flash. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute("content", theme === "dark" ? "#0d0d0e" : "#f6f4f1");
+        } catch (error) {
+          /* keep the light default */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

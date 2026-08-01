@@ -1,28 +1,69 @@
 export const portfolio = {
+  name: "Muhammad Hassan",
+  initials: "MH",
+  role: "AI/ML + Full Stack Developer",
+  location: "Lahore, Pakistan",
+  availability: "Open to full-time & freelance work",
+
+  // Hero headline. `em: true` renders the segment in the editorial serif italic.
+  headline: [
+    [{ text: "I build full-stack" }],
+    [{ text: "products with" }],
+    [{ text: "intelligent", em: true }, { text: " systems inside." }]
+  ],
+
   summary:
-    "Computer Engineering student from ITU Lahore focused on React, full-stack product builds, and AI/ML systems. I like turning technical workflows into interfaces people can actually use.",
+    "Computer Engineering graduate from ITU Lahore working across React front-ends, Node APIs, and applied computer vision. I like turning dense technical workflows into interfaces people can actually use.",
+
   contact: {
     email: "hassan7663arif@gmail.com",
     phone: "+92-370-7885899",
     linkedin: "https://www.linkedin.com/in/muhammad-hassan-arif-400320322/",
     github: "https://github.com/HassanArif121"
   },
-  stats: [
-    { value: "6+", label: "portfolio-ready projects" },
-    { value: "3.25", label: "CGPA at ITU Lahore" },
-    { value: "2026", label: "B.Sc. Computer Engineering" },
-    { value: "AWS", label: "Cloud Foundations graduate" }
+
+  marquee: [
+    "React",
+    "Next.js",
+    "React Native",
+    "TypeScript",
+    "Node & Express",
+    "MongoDB",
+    "Python",
+    "PyTorch",
+    "OpenCV",
+    "YOLO",
+    "AWS"
   ],
+
+  stats: [
+    { value: "6", suffix: "+", label: "Projects shipped", note: "Web, mobile & vision" },
+    { value: "3.30", label: "Final CGPA", note: "B.Sc. Computer Engineering" },
+    { value: "2026", plain: true, label: "Graduated", note: "ITU Lahore" },
+    { value: "4", suffix: " mo", label: "Industry internship", note: "React Native, Nexentra" }
+  ],
+
   projects: [
     {
       title: "Automated Attendance & Monitoring System",
-      category: "Web",
+      category: "AI/ML",
       year: "Final Year Project",
+      featured: true,
       image: "/assets/project-attendance.png",
       href: "https://github.com/saadee1605/finalyearproject",
       description:
-        "React dashboard experience aligned with a 9-stage computer vision pipeline for attendance capture, validation, logging, and monitoring.",
-      stack: ["React", "JavaScript", "Computer Vision", "OpenCV"]
+        "A face-recognition attendance platform built on a 9-stage computer vision pipeline — capture, detection, embedding, matching, validation, logging and live monitoring — wrapped in a React dashboard that teachers can run without touching a terminal.",
+      stack: ["React", "Python", "OpenCV", "Computer Vision", "MongoDB"]
+    },
+    {
+      title: "Real-Time Weapon Detection",
+      category: "AI/ML",
+      year: "2025",
+      image: "/assets/project-ai-vision.png",
+      href: "",
+      description:
+        "YOLO-based detection workflow covering dataset collection, annotation, training runs, evaluation against precision/recall targets, and deployment prep for live video streams.",
+      stack: ["Python", "YOLO", "PyTorch", "Deployment"]
     },
     {
       title: "Law Firm Website",
@@ -31,28 +72,8 @@ export const portfolio = {
       image: "/assets/project-lawfirm.png",
       href: "https://lawfirm-liard.vercel.app/",
       description:
-        "Responsive Next.js site with a professional interface, SEO basics, accessibility-minded structure, and clean delivery.",
+        "Production Next.js site for a legal practice — content-driven pages, SEO fundamentals, accessible navigation and a layout that holds up from mobile to wide desktop.",
       stack: ["Next.js", "React", "SEO", "Accessibility"]
-    },
-    {
-      title: "Rehabilitation Website",
-      category: "Web",
-      year: "React Project",
-      image: "/assets/project-rehab.png",
-      href: "https://github.com/HassanArif121/Rehabilitation-Center",
-      description:
-        "Structured React website with reusable sections for services, calls to action, and readable navigation across screen sizes.",
-      stack: ["React", "Responsive UI", "Components"]
-    },
-    {
-      title: "Real-Time Weapon Detection System",
-      category: "AI/ML",
-      year: "2025",
-      image: "/assets/project-ai-vision.png",
-      href: "",
-      description:
-        "YOLO-powered object detection workflow covering data collection, annotation, training, evaluation, and deployment preparation.",
-      stack: ["Python", "YOLO", "Machine Learning", "Deployment"]
     },
     {
       title: "White Blood Cell Classification",
@@ -61,8 +82,18 @@ export const portfolio = {
       image: "/assets/project-ai-vision.png",
       href: "",
       description:
-        "Research-oriented image processing pipeline for microscopy enhancement and deep learning classification across cell categories.",
+        "Research-oriented pipeline for microscopy images: preprocessing and enhancement, augmentation, then a CNN classifier across the major white blood cell categories.",
       stack: ["Python", "OpenCV", "Deep Learning", "Healthcare AI"]
+    },
+    {
+      title: "Rehabilitation Center Website",
+      category: "Web",
+      year: "2024",
+      image: "/assets/project-rehab.png",
+      href: "https://github.com/HassanArif121/Rehabilitation-Center",
+      description:
+        "Component-driven React site with reusable service sections, clear calls to action and readable navigation across every breakpoint.",
+      stack: ["React", "Components", "Responsive UI"]
     },
     {
       title: "Maze Solving Game",
@@ -71,46 +102,63 @@ export const portfolio = {
       image: "/assets/project-attendance.png",
       href: "",
       description:
-        "Interactive C++ pathfinding project using BFS and DFS to demonstrate graph traversal and data-structure fundamentals.",
+        "Interactive C++ pathfinding project visualising BFS and DFS traversal step by step — built to make graph algorithms and data structures tangible.",
       stack: ["C++", "BFS", "DFS", "Algorithms"]
     }
   ],
+
   skills: [
     {
-      title: "Frontend & Product UI",
-      items: ["React", "Next.js", "React Native", "Responsive interfaces", "State-driven components"]
+      title: "Frontend",
+      icon: "layout",
+      blurb: "Interfaces that stay fast and legible as they grow.",
+      items: ["React", "Next.js", "React Native", "JavaScript / TypeScript", "Responsive systems"]
     },
     {
       title: "Backend & Data",
-      items: ["Express", "MongoDB", "REST APIs", "Contact workflows", "Deployment-ready structure"]
+      icon: "server",
+      blurb: "APIs and data layers that are simple to reason about.",
+      items: ["Node & Express", "MongoDB / Mongoose", "REST APIs", "Auth & mail flows", "Deployment"]
     },
     {
-      title: "AI / Computer Vision",
-      items: ["Machine learning", "Deep learning", "YOLO", "OpenCV", "Image processing pipelines"]
+      title: "AI & Computer Vision",
+      icon: "brain",
+      blurb: "From dataset to a model that actually runs somewhere.",
+      items: ["Machine learning", "Deep learning", "YOLO detection", "OpenCV", "Image pipelines"]
     },
     {
-      title: "Engineering Workflow",
-      items: ["GitHub", "Jira", "Notion", "n8n", "AWS Cloud Foundations"]
+      title: "Workflow",
+      icon: "workflow",
+      blurb: "The unglamorous parts that keep projects shipping.",
+      items: ["Git & GitHub", "Jira", "Notion", "n8n automation", "AWS Cloud Foundations"]
     }
   ],
+
   timeline: [
     {
-      date: "Jun 2025 - Oct 2025",
-      title: "React Native Intern - Nexentra Solutions",
+      date: "Jun 2025 — Oct 2025",
+      title: "React Native Intern",
+      org: "Nexentra Solutions",
+      kind: "Work",
       body:
-        "Contributed to mobile application features, component architecture, state management, and clean delivery with senior engineering guidance."
+        "Shipped mobile app features alongside senior engineers — component architecture, state management, API integration and review-ready delivery."
     },
     {
-      date: "Aug 2022 - Jun 2026",
-      title: "B.Sc. Computer Engineering - Information Technology University",
+      date: "Aug 2022 — Jun 2026",
+      title: "B.Sc. Computer Engineering",
+      org: "Information Technology University, Lahore",
+      kind: "Education",
+      status: "Completed · 3.30 CGPA",
       body:
-        "Built a foundation in programming, object-oriented design, data structures, databases, machine learning, and computer vision."
+        "Graduated with a 3.30 CGPA. Coursework across programming, object-oriented design, data structures, databases, machine learning and computer vision, capped by a computer-vision final year project."
     },
     {
-      date: "AWS Academy",
+      date: "2024",
       title: "Cloud Foundations Graduate",
+      org: "AWS Academy",
+      kind: "Certification",
       body:
-        "Completed foundational AWS cloud training, adding deployment and cloud literacy to full-stack and AI project work."
+        "Foundational AWS training covering core services, architecture and deployment — the cloud literacy behind the full-stack and AI work."
     }
   ]
 };
