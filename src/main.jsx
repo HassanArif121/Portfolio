@@ -300,10 +300,11 @@ function Hero() {
         >
           <div className="portrait__frame">
             <img
-              src="/assets/muhammad-hassan-profile.png"
-              alt={portfolio.name}
-              width="820"
-              height="1025"
+              src="/assets/hassan-profile-photo.png"
+              alt={`Portrait of ${portfolio.name}`}
+              width="1254"
+              height="1254"
+              fetchPriority="high"
             />
           </div>
           <motion.div

@@ -694,13 +694,11 @@ textarea {
   height: auto; /* let aspect-ratio win over the width/height attributes */
   aspect-ratio: 4 / 5;
   object-fit: cover;
-  object-position: 54% 22%;
-  filter: grayscale(0.18) contrast(1.03);
-  transition: filter 600ms var(--ease), transform 900ms var(--ease-out);
+  object-position: center;
+  transition: transform 900ms var(--ease-out);
 }
 
 .portrait:hover .portrait__frame img {
-  filter: grayscale(0) contrast(1.05);
   transform: scale(1.03);
 }
 
